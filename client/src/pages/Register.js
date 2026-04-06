@@ -20,6 +20,9 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -76,8 +79,17 @@ const Register = () => {
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
-        <h2>Register for Savour Meals</h2>
+      <div className="auth-visual-section">
+        <div className="visual-content">
+          <div className="sdg-badge">SDG Goal 2</div>
+          <h1>End Hunger<br/>Share Hope</h1>
+          <p>Join our thriving community dedicated to redistributing excess food to those who need it most. Together, we can achieve Zero Hunger.</p>
+          <img src="/sdg_hero.png" alt="Community sharing food - SDG 2 Zero Hunger" className="sdg-hero-img" />
+        </div>
+      </div>
+      <div className="auth-form-section">
+        <div className="auth-card">
+          <h2>Register for Savour Meals</h2>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -142,24 +154,44 @@ const Register = () => {
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={6}
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength={6}
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn" 
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex="-1"
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
           <div className="form-group">
             <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+              <button 
+                type="button" 
+                className="password-toggle-btn" 
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                tabIndex="-1"
+              >
+                {showConfirmPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
           <button type="submit" disabled={loading} className="btn-primary">
             {loading ? 'Registering...' : 'Register'}
@@ -168,6 +200,7 @@ const Register = () => {
         <p className="auth-link">
           Already have an account? <Link to="/login">Login here</Link>
         </p>
+      </div>
       </div>
     </div>
   );

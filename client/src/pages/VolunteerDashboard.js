@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { volunteerAPI } from '../utils/api';
 import MapComponent from '../components/MapComponent';
+import DeliveryProgressBar from '../components/DeliveryProgressBar';
 import './Dashboard.css';
 
 const VolunteerDashboard = () => {
@@ -9,6 +10,10 @@ const VolunteerDashboard = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mapStates, setMapStates] = useState({}); // Store map state for each task
+  
+  // Custom OTP Modal state
+  const [otpModal, setOtpModal] = useState({ isOpen: false, taskId: null });
+  const [otpValue, setOtpValue] = useState('');
 
   useEffect(() => {
     fetchTasks();
@@ -25,12 +30,11 @@ const VolunteerDashboard = () => {
     }
   };
 
-  const updateStatus = async (taskId, status, currentLocation = null) => {
-    let otp = null;
-
-    if (status === 'picked') {
-      otp = prompt('Please enter the Pickup OTP provided by the Donor:');
-      if (!otp) return; // Cancel if no OTP entered
+  const updateStatus = async (taskId, status, currentLocation = null, otp = null) => {
+    if (status === 'picked' && !otp) {
+      // Open OTP Modal instead of native prompt
+      setOtpModal({ isOpen: true, taskId });
+      return; 
     }
 
     try {
@@ -39,8 +43,17 @@ const VolunteerDashboard = () => {
       if (!currentLocation) {
         alert(`Status updated to ${status.replace('_', ' ').toUpperCase()}`);
       }
+      setOtpModal({ isOpen: false, taskId: null });
+      setOtpValue('');
     } catch (error) {
       alert(error.response?.data?.msg || 'Error updating status');
+    }
+  };
+
+  const handleOtpSubmit = (e) => {
+    e.preventDefault();
+    if (otpValue.trim()) {
+      updateStatus(otpModal.taskId, 'picked', null, otpValue.trim());
     }
   };
 
@@ -141,22 +154,8 @@ const VolunteerDashboard = () => {
                       </span>
                     </div>
 
-                    {/* Progress Stepper */}
-                    <div className="stepper">
-                      {['assigned', 'picked', 'in_transit', 'delivered'].map((step, index) => {
-                        const statuses = ['assigned', 'picked', 'in_transit', 'delivered'];
-                        const currentIdx = statuses.indexOf(task.status);
-                        const stepIdx = statuses.indexOf(step);
-                        const isActive = stepIdx <= currentIdx;
-
-                        return (
-                          <div key={step} className={`step ${isActive ? 'active' : ''}`}>
-                            <div className="step-dot"></div>
-                            <span className="step-label">{step.replace('_', ' ')}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {/* Progress Stepper Unified Theme */}
+                    <DeliveryProgressBar status={task.status} />
 
                     <div className="card-body">
                       {/* Map Section */}
@@ -236,6 +235,46 @@ const VolunteerDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Center Pop-Up OTP Modal */}
+      {otpModal.isOpen && (
+        <div className="modal otp-modal">
+          <div className="modal-content">
+            <h2>Enter Pickup OTP</h2>
+            <p className="form-subtitle">Please enter the OTP provided by the Donor to confirm you have picked up the food.</p>
+            <form onSubmit={handleOtpSubmit}>
+              <div className="form-group">
+                <input
+                  type="text"
+                  value={otpValue}
+                  onChange={(e) => setOtpValue(e.target.value)}
+                  placeholder="e.g. 849204"
+                  className="modern-input otp-input"
+                  required
+                  autoFocus
+                  maxLength={6}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="submit" className="btn-primary">
+                  Verify & Pick Up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpModal({ isOpen: false, taskId: null });
+                    setOtpValue('');
+                  }}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

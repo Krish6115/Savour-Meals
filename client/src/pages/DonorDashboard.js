@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { foodAPI } from '../utils/api';
 import MapComponent from '../components/MapComponent';
+import DeliveryProgressBar from '../components/DeliveryProgressBar';
 import './Dashboard.css';
 
 const DonorDashboard = () => {
@@ -9,6 +10,7 @@ const DonorDashboard = () => {
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [copiedOtp, setCopiedOtp] = useState(null);
   const [formData, setFormData] = useState({
     foodType: '',
     quantity: '',
@@ -66,6 +68,12 @@ const DonorDashboard = () => {
     }
   };
 
+  const handleCopyOtp = (otp) => {
+    navigator.clipboard.writeText(otp);
+    setCopiedOtp(otp);
+    setTimeout(() => setCopiedOtp(null), 2000);
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: '#ff9800',
@@ -76,6 +84,7 @@ const DonorDashboard = () => {
     };
     return colors[status] || '#666';
   };
+
 
   return (
     <div className="dashboard">
@@ -257,6 +266,9 @@ const DonorDashboard = () => {
                           <span>Expires: {new Date(donation.expiryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
+                      
+                      {/* Unified Theme Progress Bar placed here */}
+                      <DeliveryProgressBar status={donation.status} />
 
                       {donation.ngoId && (
                         <div className="ngo-info">
@@ -281,6 +293,14 @@ const DonorDashboard = () => {
                         <div className="otp-box" style={{ marginTop: '15px' }}>
                           <span className="otp-label">PICKUP OTP</span>
                           <span className="otp-value">{donation.pickupOtp}</span>
+                          <button 
+                            className="btn-icon" 
+                            style={{ width: '36px', height: '36px', fontSize: '1rem' }}
+                            onClick={() => handleCopyOtp(donation.pickupOtp)}
+                            title="Copy OTP"
+                          >
+                            {copiedOtp === donation.pickupOtp ? '✔️' : '📋'}
+                          </button>
                         </div>
                       )}
 

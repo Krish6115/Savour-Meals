@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { foodAPI, ngoAPI } from '../utils/api';
+import DeliveryProgressBar from '../components/DeliveryProgressBar';
 import './Dashboard.css';
 
 const NGODashboard = () => {
@@ -140,17 +141,17 @@ const NGODashboard = () => {
                       </div>
                     )}
 
+                    <DeliveryProgressBar status={donation.status} />
+
                     <div className="card-actions">
                       {donation.status === 'accepted' && (
-                        <button onClick={() => setSelectedDonation(donation._id)} className="btn-primary">
-                          Assign Volunteer
-                        </button>
-                      )}
-
-                      {/* Show delivery status for tracking */}
-                      {['picked', 'delivered'].includes(donation.status) && (
-                        <button className="btn-secondary" disabled>
-                          Track Status
+                        <button 
+                          onClick={() => setSelectedDonation(donation._id)} 
+                          className={`btn-primary ${donation.volunteerId ? 'disabled' : ''}`}
+                          disabled={!!donation.volunteerId}
+                          title={donation.volunteerId ? 'A volunteer has already been assigned' : 'Assign a new volunteer'}
+                        >
+                          {donation.volunteerId ? 'Volunteer Assigned' : 'Assign Volunteer'}
                         </button>
                       )}
                     </div>
