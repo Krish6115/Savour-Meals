@@ -72,5 +72,19 @@ export const volunteerAPI = {
   getHistory: () => api.get('/volunteer/history'),
 };
 
+// Admin API
+export const adminAPI = {
+  getUsers: (params) => api.get('/admin/users', { params }),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  getDonations: (params) => api.get('/admin/donations', { params }),
+  getAnalytics: () => api.get('/admin/analytics'),
+};
+
+// Routing API (OSRM)
+export const routingAPI = {
+  getRoute: (donationId) => api.get(`/food/route/${donationId}`),
+};
+
 export default api;
 

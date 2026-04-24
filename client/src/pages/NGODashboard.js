@@ -1,16 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { foodAPI, ngoAPI } from '../utils/api';
+import { useToast } from '../components/Toast';
 import DeliveryProgressBar from '../components/DeliveryProgressBar';
+import MapComponent from '../components/MapComponent';
 import './Dashboard.css';
 
 const NGODashboard = () => {
   const { user, logout } = useAuth();
+  const toast = useToast();
   const [pendingDonations, setPendingDonations] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [assignForm, setAssignForm] = useState({ volunteerId: '', deliveryAddress: '' });
+
+  // Rejection modal state
+  const [rejectModal, setRejectModal] = useState({ isOpen: false, donationId: null });
+  const [rejectReason, setRejectReason] = useState('');
+
+  // Tracking modal state
+  const [trackingModal, setTrackingModal] = useState({ isOpen: false, donation: null });
 
   useEffect(() => {
     fetchData();
@@ -35,20 +45,23 @@ const NGODashboard = () => {
     try {
       await foodAPI.accept(donationId);
       fetchData();
-      alert('Donation accepted successfully!');
+      toast.success('Donation accepted successfully!');
     } catch (error) {
-      alert(error.response?.data?.msg || 'Error accepting donation');
+      toast.error(error.response?.data?.msg || 'Error accepting donation');
     }
   };
 
-  const handleReject = async (donationId) => {
-    const reason = prompt('Enter rejection reason:');
-    if (reason) {
+  const handleReject = async (e) => {
+    e.preventDefault();
+    if (rejectReason.trim()) {
       try {
-        await foodAPI.reject(donationId, reason);
+        await foodAPI.reject(rejectModal.donationId, rejectReason.trim());
+        setRejectModal({ isOpen: false, donationId: null });
+        setRejectReason('');
         fetchData();
+        toast.success('Donation rejected.');
       } catch (error) {
-        alert(error.response?.data?.msg || 'Error rejecting donation');
+        toast.error(error.response?.data?.msg || 'Error rejecting donation');
       }
     }
   };
@@ -60,20 +73,27 @@ const NGODashboard = () => {
       setSelectedDonation(null);
       setAssignForm({ volunteerId: '', deliveryAddress: '' });
       fetchData();
-      alert('Volunteer assigned successfully!');
+      toast.success('Volunteer assigned successfully!');
     } catch (error) {
-      alert(error.response?.data?.msg || 'Error assigning volunteer');
+      toast.error(error.response?.data?.msg || 'Error assigning volunteer');
     }
+  };
+
+  const handleTrackStatus = (donation) => {
+    setTrackingModal({ isOpen: true, donation });
   };
 
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <div>
-          <h1>Savour Meals - NGO Dashboard</h1>
-          <p>Welcome, {user.organizationName || user.name}!</p>
+        <div className="header-content">
+          <h1>Savour Meals <span className="role-badge" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>NGO</span></h1>
+          <p className="welcome-text">Welcome, {user.organizationName || user.name}</p>
         </div>
-        <button onClick={logout} className="btn-logout">Logout</button>
+        <button onClick={logout} className="btn-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
       </header>
 
       <div className="dashboard-content">
@@ -97,9 +117,37 @@ const NGODashboard = () => {
                     <p><strong>Location:</strong> {donation.pickupLocation?.address}</p>
                     <p><strong>Prepared:</strong> {new Date(donation.preparedAt).toLocaleString()}</p>
                     <p><strong>Expires:</strong> {new Date(donation.expiryTime).toLocaleString()}</p>
+
+                    {/* Freshness Indicator */}
+                    {(() => {
+                      const now = new Date();
+                      const expiry = new Date(donation.expiryTime);
+                      const prepared = new Date(donation.preparedAt);
+                      const totalWindow = expiry - prepared;
+                      const remaining = expiry - now;
+                      const freshnessScore = totalWindow > 0 ? Math.max(0, Math.min(100, (remaining / totalWindow) * 100)) : 0;
+                      const freshnessColor = freshnessScore > 60 ? '#22c55e' : freshnessScore > 30 ? '#eab308' : '#ef4444';
+                      const freshnessLabel = freshnessScore > 60 ? 'Fresh' : freshnessScore > 30 ? 'Moderate' : 'Expiring Soon';
+                      return (
+                        <div className="freshness-indicator" style={{ marginTop: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: freshnessColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              {freshnessLabel}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>
+                              {Math.round(freshnessScore)}%
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${freshnessScore}%`, height: '100%', background: freshnessColor, borderRadius: '3px', transition: 'width 0.5s ease' }} />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div className="card-actions">
                       <button onClick={() => handleAccept(donation._id)} className="btn-success">Accept</button>
-                      <button onClick={() => handleReject(donation._id)} className="btn-danger">Reject</button>
+                      <button onClick={() => setRejectModal({ isOpen: true, donationId: donation._id })} className="btn-danger">Reject</button>
                     </div>
                   </div>
                 </div>
@@ -108,7 +156,7 @@ const NGODashboard = () => {
           )}
         </div>
 
-        {/* Section 2: Active Deliveries (Accepted/Assigned) */}
+        {/* Section 2: Active Deliveries */}
         <div className="section-container">
           <h2>Active Deliveries</h2>
           {loading ? (
@@ -137,11 +185,35 @@ const NGODashboard = () => {
                       </div>
                     ) : (
                       <div className="volunteer-needed">
-                        <p>⚠️ Volunteer needed</p>
+                        <p>Volunteer needed</p>
                       </div>
                     )}
 
                     <DeliveryProgressBar status={donation.status} />
+
+                    {/* Show 4-digit Delivery OTP for NGO to share with volunteer */}
+                    {donation.delivery?.pickupOtp && ['accepted', 'picked', 'in_transit'].includes(donation.status) && (
+                      <div className="otp-box" style={{ marginTop: '15px' }}>
+                        <span className="otp-label">DELIVERY OTP</span>
+                        <span className="otp-value">{donation.delivery.pickupOtp}</span>
+                        <button 
+                          className="btn-icon" 
+                          style={{ width: '36px', height: '36px', fontSize: '1rem' }}
+                          onClick={() => {
+                            navigator.clipboard.writeText(donation.delivery.pickupOtp);
+                            toast.success('Delivery OTP copied to clipboard');
+                          }}
+                          title="Copy OTP"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                      </div>
+                    )}
+                    {donation.delivery?.pickupOtp && ['accepted', 'picked', 'in_transit'].includes(donation.status) && (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', marginTop: '8px', fontWeight: 500 }}>
+                        Share this OTP with the volunteer to confirm delivery.
+                      </p>
+                    )}
 
                     <div className="card-actions">
                       {donation.status === 'accepted' && (
@@ -154,6 +226,14 @@ const NGODashboard = () => {
                           {donation.volunteerId ? 'Volunteer Assigned' : 'Assign Volunteer'}
                         </button>
                       )}
+                      {['accepted', 'picked', 'delivered'].includes(donation.status) && (
+                        <button
+                          onClick={() => handleTrackStatus(donation)}
+                          className="btn-secondary"
+                        >
+                          Track Status
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -162,6 +242,7 @@ const NGODashboard = () => {
           )}
         </div>
 
+        {/* Assign Volunteer Modal */}
         {selectedDonation && (
           <div className="modal">
             <div className="modal-content">
@@ -194,15 +275,100 @@ const NGODashboard = () => {
                 </div>
                 <div className="modal-actions">
                   <button type="submit" className="btn-primary">Assign</button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDonation(null)}
-                    className="btn-secondary"
-                  >
-                    Cancel
-                  </button>
+                  <button type="button" onClick={() => setSelectedDonation(null)} className="btn-secondary">Cancel</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Rejection Reason Modal */}
+        {rejectModal.isOpen && (
+          <div className="modal">
+            <div className="modal-content">
+              <h2>Reject Donation</h2>
+              <p className="form-subtitle">Please provide a reason for rejecting this donation. This will be shared with the donor.</p>
+              <form onSubmit={handleReject}>
+                <div className="form-group">
+                  <label>Rejection Reason</label>
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="e.g., Food type not suitable for our beneficiaries, pickup location too far..."
+                    className="modern-input"
+                    rows="4"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="modal-actions">
+                  <button type="submit" className="btn-danger">Confirm Rejection</button>
+                  <button type="button" onClick={() => { setRejectModal({ isOpen: false, donationId: null }); setRejectReason(''); }} className="btn-secondary">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Track Status Modal */}
+        {trackingModal.isOpen && trackingModal.donation && (
+          <div className="modal">
+            <div className="modal-content" style={{ maxWidth: '600px' }}>
+              <h2>Delivery Tracking</h2>
+              <p className="form-subtitle">{trackingModal.donation.foodType} — {trackingModal.donation.quantity} people</p>
+              
+              <DeliveryProgressBar status={trackingModal.donation.status} />
+              
+              <div style={{ marginTop: '20px' }}>
+                <div className="info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
+                    <p style={{ margin: '4px 0', fontWeight: 600 }}>{trackingModal.donation.status.replace('_', ' ').toUpperCase()}</p>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Donor</label>
+                    <p style={{ margin: '4px 0', fontWeight: 600 }}>{trackingModal.donation.donorId?.name}</p>
+                  </div>
+                  {trackingModal.donation.volunteerId && (
+                    <>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Volunteer</label>
+                        <p style={{ margin: '4px 0', fontWeight: 600 }}>{trackingModal.donation.volunteerId.name}</p>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Contact</label>
+                        <p style={{ margin: '4px 0', fontWeight: 600 }}>
+                          <a href={`tel:${trackingModal.donation.volunteerId.phone}`} style={{ color: 'var(--primary)' }}>
+                            {trackingModal.donation.volunteerId.phone}
+                          </a>
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {trackingModal.donation.pickupLocation?.coordinates?.lat && (
+                  <div className="map-wrapper" style={{ height: '250px', marginTop: '12px' }}>
+                    <MapComponent
+                      center={{
+                        lat: trackingModal.donation.pickupLocation.coordinates.lat,
+                        lng: trackingModal.donation.pickupLocation.coordinates.lng
+                      }}
+                      markers={[{
+                        lat: trackingModal.donation.pickupLocation.coordinates.lat,
+                        lng: trackingModal.donation.pickupLocation.coordinates.lng,
+                        popup: 'Pickup Location',
+                        type: 'pickup'
+                      }]}
+                      zoom={14}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" onClick={() => setTrackingModal({ isOpen: false, donation: null })} className="btn-secondary">Close</button>
+              </div>
             </div>
           </div>
         )}
@@ -212,4 +378,3 @@ const NGODashboard = () => {
 };
 
 export default NGODashboard;
-

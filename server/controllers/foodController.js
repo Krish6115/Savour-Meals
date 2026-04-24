@@ -1,7 +1,10 @@
+const crypto = require('crypto');
 const FoodDonation = require('../models/FoodDonation');
 const User = require('../models/User');
+const Delivery = require('../models/Delivery');
 const { sendBatchNotifications, sendNotification } = require('../utils/notifications');
 const { sendNotificationEmail } = require('../utils/email');
+const { getRoute: getOSRMRoute } = require('../utils/routing');
 
 // @desc    Create a food donation request
 // @route   POST /api/food/create
@@ -41,8 +44,8 @@ const createDonation = async (req, res) => {
       });
     }
 
-    // Generate 6-digit OTP
-    const pickupOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate cryptographically secure 6-digit OTP
+    const pickupOtp = crypto.randomInt(100000, 999999).toString();
 
     const donation = await FoodDonation.create({
       donorId: req.user.id,
@@ -280,13 +283,32 @@ const updateStatus = async (req, res) => {
       });
     }
 
-    // Validate status transition
+    // Validate status value
     const validStatuses = ['pending', 'accepted', 'picked', 'delivered', 'rejected'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
         msg: 'Invalid status'
       });
+    }
+
+    // Enforce status transition order
+    const statusFlow = {
+      pending: ['accepted', 'rejected'],
+      accepted: ['picked'],
+      picked: ['delivered'],
+      delivered: [],
+      rejected: []
+    };
+
+    if (donation.status !== status) {
+      const allowedNext = statusFlow[donation.status] || [];
+      if (!allowedNext.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          msg: `Invalid status transition from '${donation.status}' to '${status}'`
+        });
+      }
     }
 
     donation.status = status;
@@ -304,12 +326,73 @@ const updateStatus = async (req, res) => {
   }
 };
 
+// @desc    Get OSRM route for a donation delivery
+// @route   GET /api/food/route/:id
+// @access  Private (Volunteer/NGO)
+const getRouteInfo = async (req, res) => {
+  try {
+    const donation = await FoodDonation.findById(req.params.id);
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        msg: 'Donation not found'
+      });
+    }
+
+    // Find associated delivery for volunteer location
+    const delivery = await Delivery.findOne({ donationId: donation._id });
+
+    const pickupCoords = donation.pickupLocation?.coordinates;
+    const volunteerCoords = delivery?.currentLocation;
+
+    if (!pickupCoords?.lat || !pickupCoords?.lng) {
+      return res.status(400).json({
+        success: false,
+        msg: 'Pickup location coordinates not available'
+      });
+    }
+
+    if (!volunteerCoords?.lat || !volunteerCoords?.lng) {
+      return res.status(400).json({
+        success: false,
+        msg: 'Volunteer location not available. Please share your location first.'
+      });
+    }
+
+    const route = await getOSRMRoute(
+      volunteerCoords.lat,
+      volunteerCoords.lng,
+      pickupCoords.lat,
+      pickupCoords.lng
+    );
+
+    if (!route) {
+      return res.status(503).json({
+        success: false,
+        msg: 'Routing service unavailable. Please try again later.'
+      });
+    }
+
+    res.json({
+      success: true,
+      route
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      msg: error.message || 'Server error computing route'
+    });
+  }
+};
+
 module.exports = {
   createDonation,
   getPendingDonations,
   getDonorDonations,
   acceptDonation,
   rejectDonation,
-  updateStatus
+  updateStatus,
+  getRouteInfo
 };
 

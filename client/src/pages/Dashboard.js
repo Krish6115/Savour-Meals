@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import DonorDashboard from './DonorDashboard';
 import NGODashboard from './NGODashboard';
 import VolunteerDashboard from './VolunteerDashboard';
+import AdminDashboard from './AdminDashboard';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
@@ -32,6 +33,8 @@ const Dashboard = () => {
       return <NGODashboard />;
     case 'volunteer':
       return <VolunteerDashboard />;
+    case 'admin':
+      return <AdminDashboard />;
     default:
       return <Navigate to="/login" replace />;
   }

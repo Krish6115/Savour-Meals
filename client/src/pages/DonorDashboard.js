@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { foodAPI } from '../utils/api';
+import { useToast } from '../components/Toast';
 import MapComponent from '../components/MapComponent';
 import DeliveryProgressBar from '../components/DeliveryProgressBar';
 import './Dashboard.css';
 
 const DonorDashboard = () => {
   const { user, logout } = useAuth();
+  const toast = useToast();
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -46,7 +48,7 @@ const DonorDashboard = () => {
 
     // Validation: Expiry time must be after prepared time
     if (new Date(formData.expiryTime) <= new Date(formData.preparedAt)) {
-      alert('Expiry time must be later than the preparation time.');
+      toast.warning('Expiry time must be later than the preparation time.');
       return;
     }
 
@@ -62,29 +64,18 @@ const DonorDashboard = () => {
         notes: '',
       });
       fetchDonations();
-      alert('Donation created successfully!');
+      toast.success('Donation created successfully!');
     } catch (error) {
-      alert(error.response?.data?.msg || 'Error creating donation');
+      toast.error(error.response?.data?.msg || 'Error creating donation');
     }
   };
 
   const handleCopyOtp = (otp) => {
     navigator.clipboard.writeText(otp);
     setCopiedOtp(otp);
+    toast.success('OTP copied to clipboard');
     setTimeout(() => setCopiedOtp(null), 2000);
   };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: '#ff9800',
-      accepted: '#2196f3',
-      picked: '#9c27b0',
-      delivered: '#4caf50',
-      rejected: '#f44336',
-    };
-    return colors[status] || '#666';
-  };
-
 
   return (
     <div className="dashboard">
@@ -94,7 +85,8 @@ const DonorDashboard = () => {
           <p className="welcome-text">Welcome back, {user.name}</p>
         </div>
         <button onClick={logout} className="btn-logout">
-          <span className="icon">🚪</span> Logout
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
         </button>
       </header>
 
@@ -104,13 +96,13 @@ const DonorDashboard = () => {
             onClick={() => setShowForm(!showForm)}
             className={`btn-primary ${showForm ? 'active' : ''}`}
           >
-            {showForm ? '✖ Cancel' : '+ Create New Donation'}
+            {showForm ? '✕ Cancel' : '+ Create New Donation'}
           </button>
         </div>
 
         {showForm && (
           <div className="form-card slide-down">
-            <h2>🍜 Share a Meal</h2>
+            <h2>Share a Meal</h2>
             <p className="form-subtitle">Fill in the details to donate food.</p>
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
@@ -162,22 +154,19 @@ const DonorDashboard = () => {
 
               <div className="form-group full-width">
                 <label>Pickup Address</label>
-                <div className="input-with-icon">
-                  <span className="input-icon">📍</span>
-                  <input
-                    type="text"
-                    value={formData.pickupLocation.address}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        pickupLocation: { ...formData.pickupLocation, address: e.target.value },
-                      })
-                    }
-                    placeholder="Enter full address for pickup"
-                    required
-                    className="modern-input"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={formData.pickupLocation.address}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      pickupLocation: { ...formData.pickupLocation, address: e.target.value },
+                    })
+                  }
+                  placeholder="Enter full address for pickup"
+                  required
+                  className="modern-input"
+                />
               </div>
 
               <div className="form-group full-width">
@@ -193,7 +182,7 @@ const DonorDashboard = () => {
 
               <div className="form-actions">
                 <button type="submit" className="btn-submit">
-                  🚀 Submit Donation
+                  Submit Donation
                 </button>
               </div>
             </form>
@@ -204,7 +193,7 @@ const DonorDashboard = () => {
           <div className="section-header">
             <h2>Your Contributions</h2>
             <button onClick={fetchDonations} className="btn-icon" title="Refresh">
-              🔄
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             </button>
           </div>
 
@@ -212,7 +201,9 @@ const DonorDashboard = () => {
             <div className="loading-spinner">Loading...</div>
           ) : donations.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">🍲</div>
+              <div className="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.4}}><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+              </div>
               <h3>No donations yet</h3>
               <p>Your journey to ending hunger starts here. Create a donation above!</p>
             </div>
@@ -258,11 +249,11 @@ const DonorDashboard = () => {
 
                       <div className="card-details">
                         <div className="detail-item">
-                          <span className="emoji">👥</span>
+                          <span className="detail-label">Qty</span>
                           <span>{donation.quantity} servings</span>
                         </div>
                         <div className="detail-item">
-                          <span className="emoji">⏰</span>
+                          <span className="detail-label">Exp</span>
                           <span>Expires: {new Date(donation.expiryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
@@ -279,17 +270,21 @@ const DonorDashboard = () => {
                       {delivery && (
                         <div className="delivery-card">
                           <div className="volunteer-row">
-                            <div className="volunteer-avatar">👤</div>
+                            <div className="volunteer-avatar">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
                             <div>
                               <p className="volunteer-name">{donation.volunteerId?.name}</p>
                               <p className="volunteer-role">Volunteer</p>
                             </div>
-                            <a href={`tel:${donation.volunteerId?.phone}`} className="phone-btn">📞</a>
+                            <a href={`tel:${donation.volunteerId?.phone}`} className="phone-btn">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </a>
                           </div>
                         </div>
                       )}
 
-                      {donation.pickupOtp && (
+                      {donation.pickupOtp && ['accepted', 'picked'].includes(donation.status) && (
                         <div className="otp-box" style={{ marginTop: '15px' }}>
                           <span className="otp-label">PICKUP OTP</span>
                           <span className="otp-value">{donation.pickupOtp}</span>
@@ -299,7 +294,11 @@ const DonorDashboard = () => {
                             onClick={() => handleCopyOtp(donation.pickupOtp)}
                             title="Copy OTP"
                           >
-                            {copiedOtp === donation.pickupOtp ? '✔️' : '📋'}
+                            {copiedOtp === donation.pickupOtp ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            ) : (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            )}
                           </button>
                         </div>
                       )}
@@ -315,7 +314,10 @@ const DonorDashboard = () => {
                       )}
                     </div>
                     <div className="card-footer">
-                      <p className="location-text">📍 {donation.pickupLocation?.address}</p>
+                      <p className="location-text">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{verticalAlign: 'middle', marginRight: '6px'}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {donation.pickupLocation?.address}
+                      </p>
                     </div>
                   </div>
                 );
@@ -329,4 +331,3 @@ const DonorDashboard = () => {
 };
 
 export default DonorDashboard;
-

@@ -6,7 +6,8 @@ const {
   getDonorDonations,
   acceptDonation,
   rejectDonation,
-  updateStatus
+  updateStatus,
+  getRouteInfo
 } = require('../controllers/foodController');
 const auth = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
@@ -29,6 +30,9 @@ router.put('/reject/:id', auth, roleCheck('ngo'), rejectDonation);
 
 // Update status (NGO/Volunteer)
 router.put('/status/:id', auth, roleCheck('ngo', 'volunteer'), updateStatus);
+
+// Get OSRM route (Volunteer/NGO)
+router.get('/route/:id', auth, roleCheck('volunteer', 'ngo'), getRouteInfo);
 
 module.exports = router;
 

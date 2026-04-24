@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const FoodDonation = require('../models/FoodDonation');
 const User = require('../models/User');
 const Delivery = require('../models/Delivery');
@@ -16,7 +17,26 @@ const getRequests = async (req, res) => {
     })
       .populate('donorId', 'name phone location')
       .populate('volunteerId', 'name phone')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Attach delivery info (including OTP) for non-pending donations
+    const donationIds = requests
+      .filter(r => r.status !== 'pending')
+      .map(r => r._id);
+
+    if (donationIds.length > 0) {
+      const deliveries = await Delivery.find({ donationId: { $in: donationIds } }).lean();
+      const deliveryMap = {};
+      deliveries.forEach(d => {
+        deliveryMap[d.donationId.toString()] = d;
+      });
+      requests.forEach(r => {
+        if (deliveryMap[r._id.toString()]) {
+          r.delivery = deliveryMap[r._id.toString()];
+        }
+      });
+    }
 
     res.json({
       success: true,
@@ -74,8 +94,8 @@ const assignVolunteer = async (req, res) => {
     donation.volunteerId = volunteerId;
     await donation.save();
 
-    // Generate 4-digit OTP
-    const pickupOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    // Generate cryptographically secure 4-digit OTP
+    const pickupOtp = crypto.randomInt(1000, 9999).toString();
 
     // Create delivery record
     const delivery = await Delivery.create({
