@@ -5,6 +5,8 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import GlobalLogo from './components/GlobalLogo';
+import PageTransition from './components/PageTransition';
 import './App.css';
 
 function App() {
@@ -12,8 +14,10 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <div className="App">
-            <Routes>
+          <PageTransition>
+            <GlobalLogo />
+            <div className="App">
+              <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route
@@ -25,8 +29,9 @@ function App() {
                 }
               />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </div>
+              </Routes>
+            </div>
+          </PageTransition>
         </Router>
       </ToastProvider>
     </AuthProvider>

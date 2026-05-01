@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: savour-meals-backend
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CORS_ORIGIN
+        sync: false # Set this to your Vercel frontend URL in the Render Dashboard (e.g. https://savour-meals.vercel.app)
+      - key: MONGODB_URI
+        sync: false # Set this to your MongoDB Atlas connection string in the Render Dashboard
+      - key: JWT_SECRET
+        sync: false # Set this to a random secure string in the Render Dashboard
+      - key: FRONTEND_URL
+        sync: false # Set this to your Vercel frontend URL in the Render Dashboard
