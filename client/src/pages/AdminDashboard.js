@@ -50,11 +50,10 @@ const AdminDashboard = () => {
     fetchAnalytics();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'donations') fetchDonations();
-  }, [activeTab, userFilters, donationFilters]);
+  }, [activeTab, userFilters, donationFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAnalytics = async () => {
     try {
