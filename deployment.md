@@ -31,8 +31,7 @@ We have configured a `render.yaml` file in the root directory to make deploying 
 Render will prompt you for the following variables:
 *   **`MONGODB_URI`**: Your MongoDB Atlas connection string (e.g., `mongodb+srv://<username>:<password>@cluster.mongodb.net/savour-meals...`).
 *   **`JWT_SECRET`**: A strong, random string used for signing authentication tokens.
-*   **`CORS_ORIGIN`**: Wait until you deploy the frontend (or if you know your Vercel URL, e.g., `https://savour-meals.vercel.app`), put it here to allow cross-origin requests.
-*   **`FRONTEND_URL`**: The same URL as your `CORS_ORIGIN`, used by the backend to send email links.
+*   **`FRONTEND_URL`**: Your Vercel frontend URL (e.g., `https://savour-meals.vercel.app`). This is used for CORS connection and sending email links.
 
 **Note:** Once deployed, Render will provide a URL like `https://savour-meals-backend.onrender.com`. Copy this URL for the next step.
 

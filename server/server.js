@@ -13,14 +13,10 @@ const app = express();
 
 // Middleware
 // Environment-based CORS configuration
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean)
-    : true, // Allow all origins in development
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : true,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -30,6 +26,11 @@ app.use('/api/food', require('./routes/food'));
 app.use('/api/ngo', require('./routes/ngo'));
 app.use('/api/volunteer', require('./routes/volunteer'));
 app.use('/api/admin', require('./routes/admin'));
+
+// Base Health check route (required by some hosts)
+app.get('/', (req, res) => {
+  res.send('API is running');
+});
 
 // Health check route
 app.get('/api/health', (req, res) => {
