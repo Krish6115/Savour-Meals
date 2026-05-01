@@ -8,8 +8,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 5000
       - key: CORS_ORIGIN
         sync: false # Set this to your Vercel frontend URL in the Render Dashboard (e.g. https://savour-meals.vercel.app)
       - key: MONGODB_URI
